@@ -4,7 +4,7 @@ import com.opencsv.CSVReader;
 import com.opencsv.bean.ColumnPositionMappingStrategy;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
-import org.json.simple.JSONObject;
+import org.json.simple.JSONArray;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.w3c.dom.Document;
@@ -24,34 +24,30 @@ public class Main {
 
 
     public static void main(String[] args) {
-        String[] columnMapping = {"id", "firstName", "lastName", "country", "age"};
+        // файлы на чтение
         String CSVSource = "data.csv";
         String XMLSource = "data.xml";
+        String JSONSource = "new_data.json";
 
         // преобразование csv → json
+        String[] columnMapping = {"id", "firstName", "lastName", "country", "age"};
         List<Employee> listFromCSV = parseCSV(columnMapping, CSVSource);
-        String json = listToJson(listFromCSV);
-        writeString(json, "data.json");
+        String jsonRender = listToJson(listFromCSV);
+        writeString(jsonRender, "data.json");
         filePrintOut("data.json");
 
-
         // преобразование xml → json
-        List<Employee> listFromXML = new ArrayList<>();
-        try {
-            listFromXML = parseXML(XMLSource);
-        } catch (ParserConfigurationException | SAXException | IOException | NumberFormatException e) {
-            System.out.println(e.getMessage());
-        }
+        List<Employee> listFromXML = parseXML(XMLSource);
         writeString(listToJson(listFromXML), "data2.json");
         filePrintOut("data2.json");
 
-
         // чтение объектов из json
-        String stringFromMyJson = readString("new_data.json");
-        List<Employee> listFromJson = jsonToList(stringFromMyJson);
+        String newDataJsonContent = readString(JSONSource);
+        List<Employee> listFromJson = jsonToList(newDataJsonContent);
+        listFromJson.forEach(System.out::println);
 
-
-
+        // то же самое одной строкой
+        jsonToList(readString(JSONSource)).forEach(System.out::println);
     }
 
     private static List<Employee> parseCSV(String[] columnMapping, String source) {
@@ -76,34 +72,32 @@ public class Main {
         return new GsonBuilder().setPrettyPrinting().create().toJson(list, listType);
     }
 
-    private static List<Employee> parseXML(String source)
-            throws ParserConfigurationException, SAXException, IOException, NumberFormatException {
+    private static List<Employee> parseXML(String source) {
         List<Employee> list = new ArrayList<>();
-        DocumentBuilderFactory enterprise = DocumentBuilderFactory.newInstance();
-        Document XMLObject = enterprise.newDocumentBuilder().parse(new File(source));
+        try {
+            DocumentBuilderFactory enterprise = DocumentBuilderFactory.newInstance();
+            Document XMLObject = enterprise.newDocumentBuilder().parse(new File(source));
 
-        NodeList content = XMLObject.getDocumentElement().getChildNodes();
-        for (int i = 0; i < content.getLength(); i++) {
-            Node node = content.item(i);
-            if (Node.ELEMENT_NODE == node.getNodeType()) {
-                Element employee = (Element) node;
-                Employee next = new Employee();
+            NodeList content = XMLObject.getDocumentElement().getChildNodes();
+            for (int i = 0; i < content.getLength(); i++) {
+                Node node = content.item(i);
+                if (Node.ELEMENT_NODE == node.getNodeType()) {
+                    Element employee = (Element) node;
+                    Employee next = new Employee();
 
-                next.id = Long.parseLong(extractProperty(employee, "id"));
-                next.firstName = extractProperty(employee, "firstName");
-                next.lastName = extractProperty(employee, "lastName");
-                next.country = extractProperty(employee, "country");
-                next.age = Integer.parseInt(extractProperty(employee, "age"));
+                    next.id = Long.parseLong(extractProperty(employee, "id"));
+                    next.firstName = extractProperty(employee, "firstName");
+                    next.lastName = extractProperty(employee, "lastName");
+                    next.country = extractProperty(employee, "country");
+                    next.age = Integer.parseInt(extractProperty(employee, "age"));
 
-                list.add(next);
+                    list.add(next);
+                }
             }
+        } catch (ParserConfigurationException | SAXException | IOException | NumberFormatException e) {
+            System.out.println(e.getMessage());
         }
         return list;
-    }
-
-    private static String readString(String source) {
-
-        return null;
     }
 
     private static List<Employee> jsonToList(String jsonString) {
@@ -111,19 +105,28 @@ public class Main {
         JSONParser parser = new JSONParser();
         try {
             Object thing = parser.parse(jsonString);
-            JSONObject essence = (JSONObject) thing;
-            System.out.println(essence);
+            JSONArray content = (JSONArray) thing;
+            for (Object o : content) {
+                Employee e = new GsonBuilder().create().fromJson(String.valueOf(o), Employee.class);
 
+                // альтернативный вариант через JSON-Simple
+//                JSONObject next = (JSONObject) o;
+//                Employee e = new Employee();
+//                e.id = (long) next.get("id");
+//                e.firstName = (String) next.get("firstName");
+//                e.lastName = (String) next.get("lastName");
+//                e.country = (String) next.get("country");
+//                e.age = Integer.parseInt(String.valueOf(next.get("age")));    //?
 
+                list.add(e);
+            }
         } catch (ParseException e) {
             System.out.println(e.getMessage());
         }
-
         return list;
     }
 
-
-
+    // служебные нужности
     private static void writeString(String jsonString, String destination) {
         try(FileWriter writer = new FileWriter(destination, false)) {
             writer.write(jsonString);
@@ -132,7 +135,17 @@ public class Main {
             System.out.println(e.getMessage());
         }
     }
-
+    private static String readString(String source) {
+        StringBuilder string = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new FileReader(source))) {
+            String c;
+            while ((c = reader.readLine()) != null)
+                string.append(c);
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+        return string.toString();
+    }
     private static void filePrintOut(String source) {
         try (FileReader reader = new FileReader(source)) {
             int ch;
@@ -143,7 +156,6 @@ public class Main {
             System.out.println(e.getMessage());
         }
     }
-
     private static String extractProperty(Element element, String field) {
         return element.getElementsByTagName(field).item(0).getTextContent();
     }
