@@ -1,24 +1,23 @@
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.opencsv.CSVReader;
 import com.opencsv.bean.ColumnPositionMappingStrategy;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
-import com.opencsv.exceptions.CsvException;
-import org.w3c.dom.*;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class Main {
@@ -46,6 +45,10 @@ public class Main {
         writeString(listToJson(listFromXML), "data2.json");
         filePrintOut("data2.json");
 
+
+        // чтение объектов из json
+        String stringFromMyJson = readString("new_data.json");
+        List<Employee> listFromJson = jsonToList(stringFromMyJson);
 
 
 
@@ -95,6 +98,27 @@ public class Main {
                 list.add(next);
             }
         }
+        return list;
+    }
+
+    private static String readString(String source) {
+
+        return null;
+    }
+
+    private static List<Employee> jsonToList(String jsonString) {
+        List<Employee> list = new ArrayList<>();
+        JSONParser parser = new JSONParser();
+        try {
+            Object thing = parser.parse(jsonString);
+            JSONObject essence = (JSONObject) thing;
+            System.out.println(essence);
+
+
+        } catch (ParseException e) {
+            System.out.println(e.getMessage());
+        }
+
         return list;
     }
 
